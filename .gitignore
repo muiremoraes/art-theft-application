@@ -1,2 +1,9 @@
 venv/
 instance/site.db
+models/__pycache__/
+services/__pycache__/
+*.pyc
+images/
+encoded_images/
+.vscode
+

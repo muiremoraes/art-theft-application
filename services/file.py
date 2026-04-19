@@ -12,10 +12,10 @@ encoded_folder = "./encoded_images"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)#create upload folder if not exists
 
 def allowed_file(filename):
-    return "." in filename and \
-           filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS #check if file ends in one of the okay types
-
-
+    if not filename or "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_EXTENSIONS
 
 def serve_image(filename):
     return send_from_directory(UPLOAD_FOLDER, filename) #gets image from file and display on frontend
@@ -23,6 +23,7 @@ def serve_image(filename):
 
 
 def upload_image():
+    
     if "file" not in request.files: #check if contain file
         return jsonify({"error": "No file part"}), 400
 

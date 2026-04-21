@@ -1,13 +1,16 @@
-import os
-from uuid import uuid4
+# import os
+# from uuid import uuid4
 from models.user_model import User, db
 from models.image_model import Image
 from flask import jsonify
+import requests 
+from api_config import IMAGE_BB_KEY
 
-REVERSE_IMAGE_IMGS = "./uploaded_images"
+
+# REVERSE_IMAGE_IMGS = "./uploaded_images"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
-os.makedirs(REVERSE_IMAGE_IMGS, exist_ok=True)
+#os.makedirs(REVERSE_IMAGE_IMGS, exist_ok=True)
 
 def allowed_file(filename):
     if not filename or "." not in filename:
@@ -26,19 +29,52 @@ def add_image(user_id, file):
     if not user:
         return jsonify({"error": "error with user please login again"}), 400
 
-    if user.num_images >= 10:
-        return jsonify({"error": "10 images max at a time"}), 400
+    if user.num_images >= 9:
+        return jsonify({"error": "9 images max at a time"}), 400
 
-    ext = file.filename.rsplit(".", 1)[1].lower()
-    filename = f"{uuid4().hex}.{ext}"
-    path = os.path.join(REVERSE_IMAGE_IMGS, filename)
+    # ext = file.filename.rsplit(".", 1)[1].lower()
+    # filename = f"{uuid4().hex}.{ext}"
+    # path = os.path.join(REVERSE_IMAGE_IMGS, filename)
 
-    file.save(path)
+    # file.save(path)
 
-    image = Image(user_id=user.id, file_path=filename)
+    # image = Image(user_id=user.id, file_path=filename)
+    # db.session.add(image)
+    # user.num_images += 1
+
+    # db.session.commit()
+
+    # return jsonify({"message": "image added"}), 201
+
+    response = requests.post(
+        url ="https://api.imgbb.com/1/upload",
+        params={"key":IMAGE_BB_KEY},
+        files={"image":file.stream},
+    )
+
+    if response.status_code != 200:
+        return jsonify({"error":"image upload failed"}),500
+
+    data = response.json()
+
+    if not data.get("success"):
+        return jsonify({"error":"image upload failed"}),500
+
+    image_url = data["data"]["url"]
+    delete_url = data["data"]["delete_url"]
+
+    medium = data["data"].get("medium")
+
+    if medium:
+        display_url = medium["url"]
+    else:
+        display_url = image_url
+
+    image = Image(user_id=user_id, image_url=image_url, display_url=display_url, delete_url=delete_url)
+
     db.session.add(image)
-    user.num_images += 1
 
+    user.num_images += 1
     db.session.commit()
 
     return jsonify({"message": "image added"}), 201
@@ -52,17 +88,17 @@ def display_images(user_id):
     if not user:
         return jsonify({"error": "User not found"}), 400
 
-    images = Image.query.filter_by(user_id = user_id).all()
+    images = Image.query.filter_by(user_id = user_id).order_by(Image.created_at.desc()).all()
 
     results = []
     for img in images:
-        results.append({"id":img.id, "path": f"/uploaded_images/{img.file_path}"})
+        results.append({"id":img.id, "url": img.display_url})
 
     return jsonify({"images": results}),200
 
 
 
-def delete_image(image_id):
+def delete_image(user_id, image_id):
     image = Image.query.get(image_id)
 
     if not image:
@@ -73,10 +109,10 @@ def delete_image(image_id):
 
     user = User.query.get(image.user_id)
 
-    file_path = os.path.join(REVERSE_IMAGE_IMGS, image.file_path)
+   # file_path = os.path.join(REVERSE_IMAGE_IMGS, image.file_path)
 
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    # if os.path.exists(file_path):
+    #     os.remove(file_path)
 
     db.session.delete(image)
 
@@ -85,30 +121,6 @@ def delete_image(image_id):
 
     db.session.commit()
     return jsonify({"message": "image deleted"}), 200
-
-
-
-
-
-# REVERSE_IMAGE_IMGS = ./path
-
-# def add_image():
-#     get the user id from jwt
-#     check how images the user has 
-#     add image to folder with id to db
-
-# REVERSE_IMAGE_IMGS = ./path
-
-# file random string for secuirty 
-
-# add file id to db
-
-# def display_images()
-#     get user id from jwt
-
-#     get images with id from db 
-
-#     make list {} for paths and send it to the frontend
 
 
 

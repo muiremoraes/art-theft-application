@@ -5,5 +5,9 @@ services/__pycache__/
 *.pyc
 images/
 encoded_images/
+uploaded_images/
+compare_folder/
+compare_results/
 .vscode
+api_config.py
 

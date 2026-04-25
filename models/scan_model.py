@@ -18,5 +18,4 @@ class ScanResult(db.Model):
     website_url = db.Column(db.String(600), nullable=False)
     website_title = db.Column(db.String(600), nullable=True)
     thumbnail_url = db.Column(db.String(600), nullable=True)
-    is_safe = db.Column(db.Boolean, nullable=True)
-
+    # sift_score = db.Column(db.Float, nullable=True)

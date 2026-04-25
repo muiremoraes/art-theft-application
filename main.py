@@ -5,7 +5,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from flask_bcrypt import Bcrypt
 from models.user_model import db, User
 from models.image_model import Image
-from services.auth import register, login, change_user_info
+from services.auth import register, login, change_user_info, check_otp
 from services.file import serve_image, upload_image, download_image
 from services.steganography import encode_endpoint, decode_endpoint
 from services.visible_wm import visible_watermark_endpoint
@@ -16,14 +16,19 @@ from services.reverse_search import start_scan, get_results
 from services.scheduler import start_scheduler
 import os
 from flask_cors import CORS
-
+from flask_mail import Mail, Message
+from api_config import GMAIL_ID, GMAIL_PASSWORD, SECRET_KEY, JWT_SECRET_KEY
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from datetime import timedelta
 app = Flask(__name__)
 CORS(app)
 #CORS(app, resources={r"/*": {"origins":["http://localhost:5173"]}}) #TODO:set website
 
 # source ./venv/bin/activate
-app.config['SECRET_KEY'] = 'strong_secret_key' # TODO: dont have secret displayed like this 
-app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key' # TODO: dont have secret displayed like this 
+app.config['SECRET_KEY'] = SECRET_KEY
+app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
+app.config['JWT_ACCESS_TOKEN_EXPIRES']=timedelta(minutes=30)
 app.config['JWT_TOKEN_LOCATION'] = ['headers']
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -33,17 +38,38 @@ bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
 
+app.config["MAIL_SERVER"]='smtp.gmail.com'
+app.config["MAIL_PORT"]=587
+app.config["MAIL_USERNAME"]=GMAIL_ID
+app.config["MAIL_PASSWORD"]=GMAIL_PASSWORD
+app.config["MAIL_USE_TLS"]=True
+app.config["MAIL_USE_SSL"]=False
+app.config["MAIL_DEFAULT_SENDER"]=GMAIL_ID
 
+mail = Mail(app)
+
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+)
 
 @app.route('/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register_route():
     return register(request.get_json())
-
+ 
 
 
 @app.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login_route():
     return login(request.get_json())
+
+@app.route('/check_otp', methods=['POST'])
+@limiter.limit("5 per minute")
+def check_otp_route():
+    return check_otp(request.get_json())
 
 
 
@@ -117,6 +143,7 @@ def upload_to_compare_route():
     return upload_to_compare()
 
 @app.route("/compare", methods=["POST"])
+@limiter.limit("10 per minute")
 @jwt_required()
 def compare_route():
     return compare_all()
@@ -127,6 +154,7 @@ def serve_compare_result_route(filename):
 
 
 @app.route("/upload", methods=["POST"])
+@limiter.limit("10 per minute")
 @jwt_required()
 def add_image_route():
     user_id = get_jwt_identity()
@@ -148,6 +176,7 @@ def delete_image_route(image_id):
 
 
 @app.route("/scan", methods=["POST"])
+@limiter.limit("4 per minute")
 @jwt_required()
 def scan():
     user_id = get_jwt_identity()

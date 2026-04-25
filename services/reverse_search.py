@@ -28,21 +28,21 @@ def process_scans(app):
         oldest_job = ScanJob.query.filter_by(status="waiting").order_by(ScanJob.created.asc()).first()
 
         if oldest_job is None:
-            print("no jobs")##
+            print("no jobs")
             return 
 
         oldest_job.status = "doing"
-        print("doing")##
+        print("doing")
         db.session.commit()
 
         user_images = Image.query.filter_by(user_id=oldest_job.user_id).all()
 
         for image in user_images:
-            print("searching")##
+            print("searching")
             matches = search_image(image)
 
             for match in matches[:5]:
-                print("matches")##
+                print("matches")
                 result = ScanResult(
                     user_id = oldest_job.user_id,
                     image_id = image.id,

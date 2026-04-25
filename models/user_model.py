@@ -9,6 +9,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     num_images = db.Column(db.Integer, default=0)
-    
+    otp_code_hash = db.Column(db.String(255), nullable=True)
+    otp_expires = db.Column(db.DateTime, nullable=True)
 
 

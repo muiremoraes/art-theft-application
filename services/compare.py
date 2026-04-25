@@ -86,9 +86,11 @@ def sift(img1, img2):
     matches = bf.knnMatch(des1, des2, k=2)
 
     good = []
-    for m, n in matches:
-        if m.distance < 0.75 * n.distance:
-            good.append([m])
+    for match in matches:
+        if len(match) == 2:
+            m, n = match
+            if m.distance < 0.75 * n.distance:
+                good.append([m])
 
     a = len(good)
     b = len(kp2)
@@ -254,6 +256,35 @@ def serve_compare_result(filename):
 
 
 
+# def sift_score_for_reverse_img(img1, img2):
+#     img1 = cv.resize(img1, (1000, 1000))
+#     img2 = cv.resize(img2, (1000, 1000))
+
+#     detector = cv.SIFT_create()
+#     kp1, des1 = detector.detectAndCompute(img1, None)
+#     kp2, des2 = detector.detectAndCompute(img2, None)
+
+#     if des1 is None or des2 is None:
+#         return None
+
+#     bf = cv.BFMatcher()
+#     matches = bf.knnMatch(des1, des2, k=2)
+
+#     good = []
+#     for match in matches:
+#         if len(match) == 2:
+#             m, n = match
+#             if m.distance < 0.75 * n.distance:
+#                 good.append([m])
+
+#     a = len(good)
+#     b = len(kp2)
+#     if b == 0:
+#         b = 1
+#     percent = (a * 100) / b
+
+
+#     return round(percent, 2)
 
 
 

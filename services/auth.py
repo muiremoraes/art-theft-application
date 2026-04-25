@@ -3,7 +3,9 @@ from flask import jsonify, request
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
 from models.user_model import db, User
-
+import random
+from datetime import datetime, timedelta
+from flask_mail import Message
 bcrypt = Bcrypt()
 
 
@@ -50,10 +52,50 @@ def login(data):
     user = User.query.filter_by(email=email).first()
 
     if user and bcrypt.check_password_hash(user.password, password):
-        token = create_access_token(identity=str(user.id))
-        return jsonify({'token': token}), 200
+        send_otp(user)
+       
 
-    return jsonify({'message': 'Invalid credentials'}), 401
+    return jsonify({'message': 'OTP code has been sent if creds valid'}), 200
+
+
+
+def send_otp(user):
+    from main import mail
+    code = str(random.randint(100000,999999))
+    user.otp_code_hash = bcrypt.generate_password_hash(code).decode('utf-8')
+    user.otp_expires = datetime.utcnow()+timedelta(minutes=10)
+    db.session.commit()
+
+    msg = Message(subject="Art Watch login code", recipients=[user.email], body=f"Login code: {code}")
+    mail.send(msg)
+
+
+
+def check_otp(data):
+    email = data.get("email")
+    code = data.get("code")
+
+    if not email or not code:
+        return jsonify({"message":"please enter email and code"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user or user.otp_code_hash is None or user.otp_expires is None:
+        return jsonify({"message":"invalid email or code"}), 401
+
+    if datetime.utcnow() > user.otp_expires:
+        return jsonify({"message":"Code has expired"}),401
+
+    if not bcrypt.check_password_hash(user.otp_code_hash, code):
+        return jsonify({"message":"invalid email or code"}), 401
+
+
+    user.otp_code_hash = None
+    user.otp_expires = None
+    db.session.commit()
+
+    token = create_access_token(identity=str(user.id))
+    return jsonify({'token': token}), 200
+
 
 
 

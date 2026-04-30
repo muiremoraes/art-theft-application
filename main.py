@@ -56,6 +56,7 @@ limiter = Limiter(
 
 @app.route('/register', methods=['POST'])
 @limiter.limit("5 per minute")
+@limiter.limit("10 per hour")
 def register_route():
     return register(request.get_json())
  
@@ -63,11 +64,12 @@ def register_route():
 
 @app.route('/login', methods=['POST'])
 @limiter.limit("5 per minute")
+@limiter.limit("10 per hour")
 def login_route():
     return login(request.get_json())
 
 @app.route('/check_otp', methods=['POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("2 per minute")
 def check_otp_route():
     return check_otp(request.get_json())
 
@@ -154,7 +156,7 @@ def serve_compare_result_route(filename):
 
 
 @app.route("/upload", methods=["POST"])
-@limiter.limit("10 per minute")
+@limiter.limit("6 per minute")
 @jwt_required()
 def add_image_route():
     user_id = get_jwt_identity()

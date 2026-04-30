@@ -10,4 +10,4 @@ compare_folder/
 compare_results/
 .vscode
 api_config.py
-
+tests/__pycache__/

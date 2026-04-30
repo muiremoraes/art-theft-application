@@ -29,15 +29,22 @@ def dct_encode_endpoint(data):
     if not os.path.exists(img_path):
         return jsonify({"message":"error please try again"}),404
 
-    image = cv2.imread(img_path,cv2.IMREAD_GRAYSCALE)
+    image = cv2.imread(img_path)
+    ycrcb = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+    y, cr, cb = cv2.split(ycrcb)
     # check divisible by 8
-    h, w = image.shape
-    image = image[:h - h % 8, :w - w % 8] # remove pixels remaining
+    h, w = y.shape
+    y = y[:h - h % 8, :w - w % 8] # remove pixels remaining
+    cr = cr[:h - h % 8, :w - w % 8]
+    cb = cb[:h - h % 8, :w - w % 8]
 
-    image_with_wm = encode_watermark_into_image(image.copy(), watermark)
+    y_with_wm = encode_watermark_into_image(y.copy(), watermark)
+
+    ycrcb_with_wm = cv2.merge([y_with_wm, cr, cb])
+    final_img = cv2.cvtColor(ycrcb_with_wm, cv2.COLOR_YCrCb2BGR)
 
     output_path = os.path.join(ENCODED_DIR, img_name)
-    cv2.imwrite(output_path,image_with_wm)
+    cv2.imwrite(output_path,final_img)
 
     return jsonify({"message":"dct watermark added"}),201
 
@@ -142,14 +149,19 @@ def dct_decode_endpoint(data):
     if not os.path.exists(img_path):
         return jsonify({"message":"error please try again"}),404
 
-    print(img_path)
-    image = cv2.imread(img_path,cv2.IMREAD_GRAYSCALE)
-    print(image)
-    # check divisible by 8
-    h, w = image.shape
-    image = image[:h - h % 8, :w - w % 8] # remove pixels remaining
+    #print(img_path)
+    image = cv2.imread(img_path)
 
-    decoded_wm = decode_watermark_from_image(image)
+    ycrcb = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+    y, cr, cb = cv2.split(ycrcb)
+
+
+    #print(image)
+    # check divisible by 8
+    h, w = y.shape
+    y = y[:h - h % 8, :w - w % 8] # remove pixels remaining
+
+    decoded_wm = decode_watermark_from_image(y)
 
     return jsonify({"decoded_watermark" : decoded_wm}), 200
 

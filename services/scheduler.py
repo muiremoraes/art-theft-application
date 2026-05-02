@@ -9,7 +9,7 @@ def start_scheduler(app):
     scheduler.add_job(
         func=lambda: process_scans(app),
         trigger="interval",
-        minutes=1,
+        minutes=10,
     )
 
     scheduler.start()

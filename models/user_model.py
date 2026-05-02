@@ -11,5 +11,5 @@ class User(db.Model):
     num_images = db.Column(db.Integer, default=0)
     otp_code_hash = db.Column(db.String(255), nullable=True)
     otp_expires = db.Column(db.DateTime, nullable=True)
-
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
 

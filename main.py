@@ -21,9 +21,15 @@ from api_config import GMAIL_ID, GMAIL_PASSWORD, SECRET_KEY, JWT_SECRET_KEY
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from datetime import timedelta
+from flask_talisman import Talisman
 app = Flask(__name__)
 CORS(app)
-#CORS(app, resources={r"/*": {"origins":["http://localhost:5173"]}}) #TODO:set website
+
+Talisman(
+    app,
+    force_https=False,
+    content_security_policy=None
+)
 
 # source ./venv/bin/activate
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -60,7 +66,6 @@ limiter = Limiter(
 def register_route():
     return register(request.get_json())
  
-
 
 @app.route('/login', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -192,8 +197,45 @@ def scan_results():
     return get_results(user_id)
 
 
+def is_admin_user():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    return user and user.is_admin
 
 
+@app.route("/admin/users", methods=["GET"])
+@jwt_required()
+def admin_view_users_route():
+    if not is_admin_user():
+        return jsonify({"message":"admin access required"}),403
+    users = User.query.all()
+    results = []
+    for u in users:
+        results.append({
+        "id":u.id,
+        "username":u.username,
+        "email":u.email,
+        "password_hash":u.password,
+        "num_images":u.num_images,
+        "is_admin":u.is_admin
+        })
+    return jsonify(results),200
+        
+    
+@app.route("/admin/images", methods=["GET"])
+@jwt_required()
+def admin_view_images_route():
+    if not is_admin_user():
+        return jsonify({"message":"admin access required"}),403
+    imgs = Image.query.all()
+    results = []
+    for i in imgs:
+        results.append({
+        "id":i.id,
+        "user_id":i.user_id,
+        "filename":getattr(i,"filename",None)
+        })
+    return jsonify(results),200
 
 
 

@@ -4,7 +4,7 @@ import pytest
 def test_register(client):
     response=client.post("/register", json={
         "username":"testuser",
-        "email":"missrandom370@gmail.com",
+        "email":"missrandom467@gmail.com",
         "password": "StrongPass@123"
     })
     print("test_register(client) = user created")

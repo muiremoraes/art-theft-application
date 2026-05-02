@@ -22,6 +22,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from datetime import timedelta
 from flask_talisman import Talisman
+from services.fgsm import  fgsm_endpoint
+
 app = Flask(__name__)
 CORS(app)
 
@@ -220,24 +222,20 @@ def admin_view_users_route():
         "is_admin":u.is_admin
         })
     return jsonify(results),200
-        
+
     
-@app.route("/admin/images", methods=["GET"])
+@app.route("/check-perms", methods=["GET"])
 @jwt_required()
-def admin_view_images_route():
-    if not is_admin_user():
-        return jsonify({"message":"admin access required"}),403
-    imgs = Image.query.all()
-    results = []
-    for i in imgs:
-        results.append({
-        "id":i.id,
-        "user_id":i.user_id,
-        "filename":getattr(i,"filename",None)
-        })
-    return jsonify(results),200
+def check_perms_route():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    return jsonify({"is_admin":user.is_admin}),200
 
-
+@app.route("/add-fgsm", methods=["POST"])
+@jwt_required()
+@limiter.limit("5 per minute")
+def fgsm_route():
+    return fgsm_endpoint(request)
 
 
 if __name__ == "__main__":

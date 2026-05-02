@@ -23,7 +23,7 @@ from flask_limiter.util import get_remote_address
 from datetime import timedelta
 from flask_talisman import Talisman
 from services.fgsm import  fgsm_endpoint
-
+import logging
 app = Flask(__name__)
 CORS(app)
 
@@ -33,6 +33,8 @@ Talisman(
     content_security_policy=None
 )
 
+logging.basicConfig(filename="app.log", format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
+
 # source ./venv/bin/activate
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
@@ -40,6 +42,7 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES']=timedelta(minutes=30)
 app.config['JWT_TOKEN_LOCATION'] = ['headers']
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MAX_CONTENT_LENGTH']=10 * 1024 * 1024
 
 db.init_app(app)
 bcrypt = Bcrypt(app)
@@ -66,26 +69,33 @@ limiter = Limiter(
 @limiter.limit("5 per minute")
 @limiter.limit("10 per hour")
 def register_route():
-    return register(request.get_json())
+    data =request.get_json()
+    logging.info(f"Register attempt: {data.get('email')}")
+    return register(data)
  
 
 @app.route('/login', methods=['POST'])
 @limiter.limit("5 per minute")
 @limiter.limit("10 per hour")
 def login_route():
-    return login(request.get_json())
+    data =request.get_json()
+    logging.info(f"Login attempt: {data.get('email')}")
+    return login(data)
 
 @app.route('/check_otp', methods=['POST'])
 @limiter.limit("2 per minute")
 def check_otp_route():
-    return check_otp(request.get_json())
+    data =request.get_json()
+    logging.info(f"OTP check: {data.get('email')}")
+    return check_otp(data)
 
 
 
 @app.route('/change_user_info', methods=['PUT'])
 @jwt_required()
 def change_user_info_route():
-    return change_user_info(request.get_json())
+    data =request.get_json()
+    return change_user_info(data)
 
 
 
@@ -209,7 +219,9 @@ def is_admin_user():
 @jwt_required()
 def admin_view_users_route():
     if not is_admin_user():
+        logging.warning(f"Unathorized access: {get_jwt_identity()}")
         return jsonify({"message":"admin access required"}),403
+    logging.info(f"Admin viewed users: {get_jwt_identity()}")
     users = User.query.all()
     results = []
     for u in users:
@@ -237,6 +249,11 @@ def check_perms_route():
 def fgsm_route():
     return fgsm_endpoint(request)
 
+
+@app.error_handler(413)
+def too_big(e):
+    logging.warning("File too large")
+    return jsonify({"message":"file too large"}),413
 
 if __name__ == "__main__":
     with app.app_context():

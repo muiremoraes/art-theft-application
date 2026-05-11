@@ -9,7 +9,7 @@ def app():
     from models.user_model import db
 
     flask_app.config["TESTING"]=True
-    flask_app.config["SQLALCHEMY_DATABASE_URI"]= "sqlite:///:memory:"
+    # flask_app.config["SQLALCHEMY_DATABASE_URI"]= "sqlite:///:memory:"
     flask_app.config['RATELIMIT_ENABLED'] = False
     flask_app.config["MAIL_SUPPRESS_SEND"]=True
 

@@ -6,6 +6,7 @@ from models.user_model import db, User
 import random
 from datetime import datetime, timedelta
 from flask_mail import Message
+import logging
 bcrypt = Bcrypt()
 
 
@@ -31,6 +32,8 @@ def register(data):
         return jsonify({"message":"password must have at least one uppercase letter."}),400
     if not any(c.islower() for c in password):
         return jsonify({"message":"password must have at least one lowercase letter."}),400
+    if not any(c.isdigit() for c in password):
+        return jsonify({"message":"password must have at least one number."})
 
     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
     user = User(username=username, email=email, password=hashed_pw)
@@ -50,6 +53,7 @@ def login(data):
         return jsonify({"message":"Please fill in all fields"}),400
 
     user = User.query.filter_by(email=email).first()
+    logging.info(f"User found: {user is not None}, password match: {user and bcrypt.check_password_hash(user.password, password)}")
 
     if user and bcrypt.check_password_hash(user.password, password):
         send_otp(user)
@@ -67,7 +71,11 @@ def send_otp(user):
     db.session.commit()
 
     msg = Message(subject="Art Watch login code", recipients=[user.email], body=f"Login code: {code}")
-    mail.send(msg)
+    try:
+        mail.send(msg)
+        logging.info("OTP sent")
+    except Exception as e:
+        logging.error(f"OTP failed {e}")
 
 
 
@@ -80,13 +88,13 @@ def check_otp(data):
 
     user = User.query.filter_by(email=email).first()
     if not user or user.otp_code_hash is None or user.otp_expires is None:
-        return jsonify({"message":"invalid email or code"}), 401
+        return jsonify({"message":"Invalid. Please try again."}), 401
 
     if datetime.utcnow() > user.otp_expires:
         return jsonify({"message":"Code has expired"}),401
 
     if not bcrypt.check_password_hash(user.otp_code_hash, code):
-        return jsonify({"message":"invalid email or code"}), 401
+        return jsonify({"message":"Invalid. Please try again."}), 401
 
 
     user.otp_code_hash = None

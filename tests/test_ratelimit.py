@@ -1,5 +1,7 @@
 import pytest
+import os
 
+os.environ["FLASK_TESTING"]="1"
 
 @pytest.fixture
 def app():
@@ -7,7 +9,7 @@ def app():
     from models.user_model import db
 
     flask_app.config["TESTING"]=True
-    flask_app.config["SQLALCHEMY_DATABASE_URI"]= "sqlite:///:memory:"
+    # flask_app.config["SQLALCHEMY_DATABASE_URI"]= "sqlite:///:memory:"
     flask_app.config['RATELIMIT_ENABLED'] = True
     flask_app.config["MAIL_SUPPRESS_SEND"]=True
 
@@ -58,7 +60,7 @@ def test_ratelimit_compare(client):
 
 
 def test_ratelimit_upload(client):
-    for i in range(6):
+    for i in range(20):
         response = client.post("/upload", json={})
         assert response.status_code != 429, "rate limit test = test_ratelimit_upload(client)"
 

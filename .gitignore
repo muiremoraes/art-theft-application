@@ -11,3 +11,5 @@ compare_results/
 .vscode
 api_config.py
 tests/__pycache__/
+cleanup.sh
+app.log

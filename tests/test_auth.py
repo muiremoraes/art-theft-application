@@ -78,3 +78,17 @@ def test_login(client):
     })
     print("test_login(client) = login okay")
     assert response.status_code == 200
+
+
+def test_login_invalid_creds(client):
+    client.post("/register", json={
+        "username":"testuser",
+        "email":"missrandom467@gmail.com",
+        "password": "StrongPass@123"
+    })
+    response=client.post("/login", json={
+        "email":"missrandom467@gmail.com",
+        "password": "Pass@123"
+    })
+    print("test_login_invalid_creds(client) = login but doesnt show creds correct or not to prevent user enumeration")
+    assert response.status_code == 200

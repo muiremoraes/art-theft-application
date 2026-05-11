@@ -30,19 +30,28 @@ CORS(app)
 Talisman(
     app,
     force_https=False,
-    content_security_policy=None
+    content_security_policy=None,
+    x_content_type_options =True,
+    frame_options="SAMEORIGIN"
 )
 
 logging.basicConfig(filename="app.log", format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 # source ./venv/bin/activate
+
+
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
 app.config['JWT_ACCESS_TOKEN_EXPIRES']=timedelta(minutes=30)
 app.config['JWT_TOKEN_LOCATION'] = ['headers']
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH']=10 * 1024 * 1024
+
+if os.environ.get("FLASK_TESTING") =="1":
+    app.config["SQLALCHEMY_DATABASE_URI"]='sqlite:///:memory:'
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"]='sqlite:///site.db'
 
 db.init_app(app)
 bcrypt = Bcrypt(app)
@@ -62,7 +71,7 @@ mail = Mail(app)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["400 per day", "100 per hour"],
 )
 
 @app.route('/register', methods=['POST'])
@@ -173,7 +182,7 @@ def serve_compare_result_route(filename):
 
 
 @app.route("/upload", methods=["POST"])
-@limiter.limit("6 per minute")
+@limiter.limit("20 per minute")
 @jwt_required()
 def add_image_route():
     user_id = get_jwt_identity()
@@ -245,15 +254,20 @@ def check_perms_route():
 
 @app.route("/add-fgsm", methods=["POST"])
 @jwt_required()
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")
 def fgsm_route():
     return fgsm_endpoint(request)
 
 
-@app.error_handler(413)
+@app.errorhandler(413)
 def too_big(e):
     logging.warning("File too large")
     return jsonify({"message":"file too large"}),413
+
+@app.errorhandler(429)
+def too_big(e):
+    logging.warning("rate limit hit")
+    return jsonify({"message":"please slow down too many requests"}),429
 
 if __name__ == "__main__":
     with app.app_context():

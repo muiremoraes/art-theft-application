@@ -22,7 +22,7 @@ def dct_encode_endpoint(data):
 
     allowed={'png','jpg','jpeg'}
     if img_name.split(".")[-1].lower() not in allowed:
-        return jsonify({"message":"invlaid file"}),400
+        return jsonify({"message":"invalid file"}),400
 
 
     img_path = os.path.join(IMG_DIR, img_name)

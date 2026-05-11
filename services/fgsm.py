@@ -9,7 +9,7 @@ pretrained_model = tf.keras.applications.MobileNetV2(include_top=True, weights='
 pretrained_model.trainable = False
 guesses = tf.keras.applications.mobilenet_v2.decode_predictions
 loss_object = tf.keras.losses.CategoricalCrossentropy()
-eps=0.1
+eps=0.01
 
 def preprocess(img_bgr):
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)

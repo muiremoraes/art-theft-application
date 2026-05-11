@@ -30,7 +30,7 @@ def add_image(user_id, file):
         return jsonify({"error": "error with user please login again"}), 400
 
     if user.num_images >= 9:
-        return jsonify({"error": "9 images max at a time"}), 400
+        return jsonify({"error": "9 images max at a time. Please delete some to add more."}), 400
 
     # ext = file.filename.rsplit(".", 1)[1].lower()
     # filename = f"{uuid4().hex}.{ext}"
